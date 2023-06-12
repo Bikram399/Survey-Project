@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Customer Survey</title>
+    <style>
+        /* Add your CSS styles here */
+        body {
+            position: relative;
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 20%;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+        }
+
+        #welcome-screen,
+        #survey-screen,
+        #confirmation-dialog,
+        #thank-you-screen {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #survey-screen,
+        #confirmation-dialog {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #question-number {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #question-text {
+            margin-bottom: 20px;
+        }
+
+        #answer-container {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        input[type="number"],
+        textarea {
+            width: 30%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 0 0 0 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #confirmation-dialog {
+            text-align: center;
+        }
+
+        #thank-you-screen {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="welcome-screen">
+        <h1>Welcome to our Shop</h1>
+        <button id="start-btn">Start</button>
+    </div>
+
+    <div id="survey-screen" style="display: none;">
+        <div id="question-number"></div>
+        <h2 id="question-text"></h2>
+        <div id="answer-container"></div>
+        <button id="prev-btn">Previous</button>
+        <button id="next-btn">Next</button>
+        <button id="skip-btn">Skip</button>
+    </div>
+
+    <div id="confirmation-dialog" style="display: none;">
+        <h2>Are you sure you want to submit the survey?</h2>
+        <button id="confirm-btn">Confirm</button>
+    </div>
+
+    <div id="thank-you-screen" style="display: none;">
+        <h1>Thank you for your time!</h1>
+    </div>
+
+    <script>
+        // Survey questions array
+        const questions = [
+            {
+                text: "How satisfied are you with our products?",
+                type: "rating",
+                id: "products",
+                minValue: 1,
+                maxValue: 5
+            },
+            {
+                text: "How fair are the prices compared to similar retailers?",
+                type: "rating",
+                id: "prices",
+                minValue: 1,
+                maxValue: 5
+            },
+            {
+                text: "How satisfied are you with the value for money of your purchase?",
+                type: "rating",
+                id: "valueForMoney",
+                minValue: 1,
+                maxValue: 5
+            },
+            {
+                text: "On a scale of 1-10, how likely are you to recommend us to your friends and family?",
+                type: "rating",
+                id: "recommendation",
+                minValue: 1,
+                maxValue: 10
+            },
+            {
+                text: "What could we do to improve our service?",
+                type: "text",
+                id: "improvements"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        const answers = {};
+        let sessionID = generateSessionID();
+
+        const welcomeScreen = document.getElementById("welcome-screen");
+        const surveyScreen = document.getElementById("survey-screen");
+        const questionNumberElement = document.getElementById("question-number");
+        const questionTextElement = document.getElementById("question-text");
+        const answerContainer = document.getElementById("answer-container");
+        const prevButton = document.getElementById("prev-btn");
+        const nextButton = document.getElementById("next-btn");
+        const skipButton = document.getElementById("skip-btn");
+        const confirmationDialog = document.getElementById("confirmation-dialog");
+        const confirmButton = document.getElementById("confirm-btn");
+        const thankYouScreen = document.getElementById("thank-you-screen");
+
+        // Add event listener to start button
+        document.getElementById("start-btn").addEventListener("click", startSurvey);
+
+        // Event listener for previous button
+        prevButton.addEventListener("click", goToPreviousQuestion);
+
+        // Event listener for next button
+        nextButton.addEventListener("click", goToNextQuestion);
+
+        // Event listener for skip button
+        skipButton.addEventListener("click", skipQuestion);
+
+        // Event listener for confirmation dialog
+        confirmButton.addEventListener("click", submitSurvey);
+
+        function startSurvey() {
+            welcomeScreen.style.display = "none";
+            surveyScreen.style.display = "block";
+            displayCurrentQuestion();
+        }
+
+        function displayCurrentQuestion() {
+            const question = questions[currentQuestionIndex];
+            questionNumberElement.textContent = `Question ${currentQuestionIndex + 1}/${questions.length}`;
+            questionTextElement.textContent = question.text;
+
+            answerContainer.innerHTML = "";
+
+            if (question.type === "rating") {
+                const ratingInput = document.createElement("input");
+                ratingInput.type = "number";
+                ratingInput.min = question.minValue;
+                ratingInput.max = question.maxValue;
+                ratingInput.required = true;
+                ratingInput.id = question.id;
+                answerContainer.appendChild(ratingInput);
+            } else if (question.type === "text") {
+                const textInput = document.createElement("textarea");
+                textInput.required = true;
+                textInput.id = question.id;
+                answerContainer.appendChild(textInput);
+            }
+        }
+
+        function goToPreviousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                displayCurrentQuestion();
+            }
+        }
+
+        function goToNextQuestion() {
+            saveAnswer();
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                displayCurrentQuestion();
+            } else {
+                confirmationDialog.style.display = "block";
+            }
+        }
+
+        function skipQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                displayCurrentQuestion();
+            } else {
+                confirmationDialog.style.display = "block";
+            }
+        }
+
+        function saveAnswer() {
+            const question = questions[currentQuestionIndex];
+
+            if (question.type === "rating") {
+                const answer = document.getElementById(question.id).value;
+                answers[question.id] = answer;
+            } else if (question.type === "text") {
+                const answer = document.getElementById(question.id).value;
+                answers[question.id] = answer;
+            }
+        }
+
+        function submitSurvey() {
+            // Save the flag 'COMPLETED' in the database or local storage
+            answers["completed"] = "COMPLETED";
+            // You can send the answers to the backend using AJAX request if needed
+
+            confirmationDialog.style.display = "none";
+            surveyScreen.style.display = "none";
+            thankYouScreen.style.display = "block";
+
+            setTimeout(function () {
+                thankYouScreen.style.display = "none";
+                welcomeScreen.style.display = "block";
+                currentQuestionIndex = 0;
+                answers = {};
+                sessionID = generateSessionID();
+            }, 5000);
+        }
+
+        function generateSessionID() {
+            // Generate a unique session ID using a suitable method (e.g., UUID)
+            // Return the generated session ID
+        }
+    </script>
+</body>
+
+</html>
