@@ -1,6 +1,6 @@
 # Survey-Project
-simple survey 
-Set up the Project Structure:
+
+# Set up the Project Structure:
 
 Create an HTML file for the survey screen.
 Include necessary CSS and JavaScript files.
